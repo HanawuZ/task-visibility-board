@@ -14,13 +14,47 @@ function initial(n) {
   return n.charAt(i).toUpperCase()
 }
 
+// Colour per project Status option (palette tokens t0–t8 work in light and dark).
+const STATUS_TONE = [
+  [/cancel/i, 't0'],
+  [/dev complete/i, 't3'], // before "complete" so it isn't shown as finished
+  [/complete|done|closed|released|deployed|merged/i, 'ok'],
+  [/pre-?prod|staging/i, 't7'],
+  [/uat|qa|test/i, 't2'],
+  [/review/i, 't5'],
+  [/pending|pause|block|hold/i, 't4'],
+  [/on dev|in progress|doing|develop/i, 't1'],
+  [/ready/i, 't8'],
+  [/open|todo|backlog/i, 't0'],
+]
+function statusTone(s) {
+  const hit = STATUS_TONE.find(([re]) => re.test(s))
+  if (hit) return hit[1]
+  let h = 0
+  for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return 't' + ((h % 8) + 1)
+}
+function StatusTag({ s }) {
+  if (!s) return null
+  const t = statusTone(s)
+  const style = t === 'ok' ? { '--c': 'var(--ok)', '--soft': 'var(--ok-soft)' } : { '--c': `var(--${t})`, '--soft': `var(--${t}-soft)` }
+  return <span className="tag st" style={style}>{s}</span>
+}
+
 function Pill({ it }) {
   return (
     <>
       <span className={'pill ' + it.state}>{it.state === 'done' ? '✓ ' : <i />}{STL[it.state]}</span>
-      {it.status && <span className="tag">{it.status}</span>}
+      <StatusTag s={it.status} />
     </>
   )
+}
+
+/** Ticket title that opens the issue/PR on GitHub (plain text for drafts without a URL). */
+function TicketLink({ it, className }) {
+  return it.url
+    ? <a className={className + ' tlink'} href={it.url} target="_blank" rel="noopener" title={it.ref || undefined}>{it.title}</a>
+    : <span className={className}>{it.title}</span>
 }
 
 export default function BoardView({ demo, org, project, map, month, items, fetchedAt, loadNote, refreshing, refreshErr, onRefresh, onSetup, onMonth }) {
@@ -169,8 +203,9 @@ export default function BoardView({ demo, org, project, map, month, items, fetch
             <span className="k">ตอนนี้ {cur.length} งาน</span>
             {cur.slice(0, 4).map((it) => (
               <div key={it.id} className="it">
-                <span className="t">{it.title}</span>
+                <TicketLink it={it} className="t" />
                 <span className={'w' + (it.state === 'overdue' ? ' late' : '')}>
+                  <StatusTag s={it.status} />
                   {it.state === 'overdue' ? 'เลยกำหนด · release ' + fmt(it.target) : 'release ' + fmt(it.target) + ' · ' + relTxt(it.target)}
                 </span>
               </div>
@@ -187,7 +222,7 @@ export default function BoardView({ demo, org, project, map, month, items, fetch
         <div className="slot">
           <span className="k">ถัดไป</span>
           {nxt
-            ? <><span className="t">{nxt.title}</span><span className="w">เริ่ม {fmt(nxt.s)} · release {fmt(nxt.target)}</span></>
+            ? <><TicketLink it={nxt} className="t" /><span className="w"><StatusTag s={nxt.status} />เริ่ม {fmt(nxt.s)} · release {fmt(nxt.target)}</span></>
             : <span className="w">ไม่มีงานรอเริ่มในเดือนนี้</span>}
         </div>
         <div>

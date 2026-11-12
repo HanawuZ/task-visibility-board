@@ -126,6 +126,11 @@ details.help ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direc
 .pill.overdue { background: var(--today); color: #fff; }
 .tag { font-size: 11.5px; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Status option tags (UAT, On Preprod, Code review…) coloured per status */
+.tag.st { background: var(--soft); color: var(--c); border-color: var(--c); font-weight: 600; }
+.slot .w .tag.st { margin-right: 6px; }
+.slot a.tlink { color: inherit; text-decoration: none; }
+.slot a.tlink:hover { text-decoration: underline; color: var(--accent); }
 .summary { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; }
 .spot { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .spot-top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; }
