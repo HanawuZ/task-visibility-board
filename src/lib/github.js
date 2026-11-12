@@ -1,5 +1,5 @@
-// GitHub API access. Requests go to /gh/* on the Vite server, which forwards
-// them to api.github.com and adds the token from .env.local (see vite.config.js).
+// GitHub API access. Requests go to /gh/*, a read-only proxy (server/ghProxy.js)
+// run by the Vite dev server locally and by api/gh.js on Vercel; it adds the token.
 import { DEMO } from './demo.js'
 import { monthRange, qualName, quoteVal, txt } from './util.js'
 
@@ -13,7 +13,7 @@ const netErr = () => {
 function httpErr(status, j, org) {
   const m = (j && j.message) || ''
   let e
-  if (status === 401) e = new Error('token ไม่ถูกต้องหรือหมดอายุ ตรวจ FLOW_GITHUB_TOKEN ใน .env.local')
+  if (status === 401) e = new Error('token ไม่ถูกต้อง หมดอายุ หรือยังไม่ได้ตั้ง FLOW_GITHUB_TOKEN ที่ server')
   else if (/SAML|SSO/i.test(m)) e = new Error('org นี้เปิด SSO ต้องไปที่หน้า token แล้วกด Configure SSO → Authorize ให้ ' + org)
   else if (/rate limit/i.test(m)) e = new Error('เรียก GitHub ถี่เกินไป (rate limit) รอสักครู่แล้วลองใหม่')
   else if (status === 403) e = new Error('token ไม่มีสิทธิ์ (ต้องมี read:project และ repo) ' + m)
@@ -65,6 +65,17 @@ async function rest(pathOrUrl, org) {
   const j = await r.json().catch(() => null)
   if (!r.ok) throw httpErr(r.status, j, org)
   return { data: j, next: nextLink(r.headers.get('Link')) }
+}
+
+/** Whether the server (dev server or Vercel function) has a token, and its default org. */
+export async function getStatus() {
+  try {
+    const r = await fetch(REST + '/_status')
+    const j = await r.json()
+    return { reachable: true, tokenSet: !!j.tokenSet, org: j.org || '' }
+  } catch {
+    return { reachable: false, tokenSet: false, org: '' }
+  }
 }
 
 /* 1) projects list (GraphQL) */

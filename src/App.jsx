@@ -2,14 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import ConnectView from './views/ConnectView.jsx'
 import SetupView from './views/SetupView.jsx'
 import BoardView from './views/BoardView.jsx'
-import { fetchFields, fetchProjects, loadItems } from './lib/github.js'
+import { fetchFields, fetchProjects, getStatus, loadItems } from './lib/github.js'
 import { defaultMap, parseItems } from './lib/board.js'
 import { DEMO } from './lib/demo.js'
 import { LS, REFRESH_MIN, TH_M, todayISO } from './lib/util.js'
 
-/* global __GH_ORG__, __GH_TOKEN_SET__ */
-const DEFAULT_ORG = __GH_ORG__ || 'Solution-Dev3'
-const TOKEN_SET = __GH_TOKEN_SET__
+const DEFAULT_ORG = 'Solution-Dev3'
 
 // Views: connect (org → project) → setup (product + release month + field mapping) → board.
 export default function App() {
@@ -17,6 +15,7 @@ export default function App() {
   const [view, setView] = useState('connect')
   const [loadingText, setLoadingText] = useState('')
   const [org, setOrg] = useState(saved.org || DEFAULT_ORG)
+  const [server, setServer] = useState(null) // { reachable, tokenSet, org } from /gh/_status
   const [demo, setDemo] = useState(false)
   const [projects, setProjects] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -144,9 +143,14 @@ export default function App() {
 
   // start: reopen the last project (and board, if a release field was already chosen)
   useEffect(() => {
-    if (!TOKEN_SET || !saved.projectId || !saved.projectNumber) return
-    const p = { id: saved.projectId, number: saved.projectNumber, title: saved.projectTitle || 'project', url: saved.projectUrl || null }
-    openProject(p, false, saved.org || DEFAULT_ORG).then((r) => { if (r && r.m.target) loadAndShow(r.c, r.m, month) })
+    getStatus().then((s) => {
+      setServer(s)
+      const o = saved.org || s.org || DEFAULT_ORG
+      setOrg(o)
+      if (!s.tokenSet || !saved.projectId || !saved.projectNumber) return
+      const p = { id: saved.projectId, number: saved.projectNumber, title: saved.projectTitle || 'project', url: saved.projectUrl || null }
+      openProject(p, false, o).then((r) => { if (r && r.m.target) loadAndShow(r.c, r.m, month) })
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -172,7 +176,7 @@ export default function App() {
     )
   }
   return (
-    <ConnectView org={org} setOrg={setOrg} tokenSet={TOKEN_SET} msg={connectMsg} busy={busy} projects={projects}
+    <ConnectView org={org} setOrg={setOrg} server={server} msg={connectMsg} busy={busy} projects={projects}
       onLoad={onLoadProjects} onDemo={onDemo} onOpen={(p) => openProject(p)} />
   )
 }

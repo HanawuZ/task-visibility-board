@@ -2,7 +2,21 @@ import { useState } from 'react'
 import { fmt } from '../lib/util.js'
 import Steps from './Steps.jsx'
 
-export default function ConnectView({ org, setOrg, tokenSet, msg, busy, projects, onLoad, onDemo, onOpen }) {
+function TokenStatus({ server }) {
+  if (!server) return <div className="msg info"><span className="spinner" /> กำลังตรวจ token ที่ server…</div>
+  if (!server.reachable) return <div className="msg err">ติดต่อ proxy <code>/gh</code> ไม่ได้ — ตรวจว่า deploy โฟลเดอร์ <code>api/</code> และ <code>vercel.json</code> ไปด้วย</div>
+  if (!server.tokenSet) {
+    return (
+      <div className="msg err">
+        ยังไม่ได้ตั้ง <code>FLOW_GITHUB_TOKEN</code> ที่ server — ในเครื่อง: ใส่ใน <code>.env.local</code> แล้วรีสตาร์ท dev server ·
+        บน Vercel: Project → Settings → Environment Variables แล้ว Redeploy
+      </div>
+    )
+  }
+  return <div className="msg info">พร้อมใช้งาน — ใช้ token <code>FLOW_GITHUB_TOKEN</code> ที่ตั้งไว้ฝั่ง server (ไม่ถูกส่งมาที่เบราว์เซอร์)</div>
+}
+
+export default function ConnectView({ org, setOrg, server, msg, busy, projects, onLoad, onDemo, onOpen }) {
   const [showClosed, setShowClosed] = useState(false)
   const list = projects ? projects.filter((p) => showClosed || !p.closed) : null
 
@@ -23,11 +37,7 @@ export default function ConnectView({ org, setOrg, tokenSet, msg, busy, projects
         </label>
         <div className="fld">
           <span>Personal access token</span>
-          <div className={'msg ' + (tokenSet ? 'info' : 'err')}>
-            {tokenSet
-              ? <>ใช้ token จาก <code>FLOW_GITHUB_TOKEN</code> ใน <code>.env.local</code> (อยู่ที่ dev server ไม่ถูกส่งมาที่เบราว์เซอร์)</>
-              : <>ยังไม่ได้ตั้ง <code>FLOW_GITHUB_TOKEN</code> ใน <code>.env.local</code> — ใส่แล้วรีสตาร์ท dev server</>}
-          </div>
+          <TokenStatus server={server} />
         </div>
         <details className="help">
           <summary>ต้องใช้ token สิทธิ์อะไร</summary>
